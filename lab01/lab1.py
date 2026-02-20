@@ -19,6 +19,7 @@ class simApp:
 
         self.params = ttk.LabelFrame(main, text="Параметры")
         self.params.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
+
         self.v0_var = self.add_spin("Начальная скорость v0 (м/с)", 0, 50, 1, 30)
         self.angle_var = self.add_spin("Угол (градусы)", 0, 90, 1, 40)
         self.height_var = self.add_spin("Начальная высота y0 (м)", 0, 50, 1, 0)
@@ -100,6 +101,9 @@ class simApp:
         return x_data, y_data, self.x, self.max_height, speed_end
 
     def plot_and_record(self):
+        if self.is_running:
+            return
+
         x_data, y_data, distance, max_height, speed_end = self.trajectory()
         dt = self.dt_var.get()
         self.ax.plot(x_data, y_data, label=f"dt={dt}")
