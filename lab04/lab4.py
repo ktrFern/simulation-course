@@ -4,20 +4,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-def mcg(n, seed=1, a=16807, m=2 ** 31 - 1):
-    x = seed
+def mcg(n, seed=42, a=2 ** 32 + 3, m=2 ** 63):
+    x = seed % m
     res = []
     for _ in range(n):
         x = (a * x) % m
         res.append(x / m)
     return np.array(res)
 
-def lcg(n, seed=1, a=1664525, c=1013904223, m=2 ** 32):
-    x = seed
+def fibonacci_gen(n, seed=42, m=2 ** 63):
     res = []
+    x_prev2 = seed % m
+    x_prev1 = (seed + 1) % m
+
     for _ in range(n):
-        x = (a * x + c) % m
-        res.append(x / m)
+        x_new = (x_prev1 + x_prev2) % m
+        res.append(x_new / m)
+        x_prev2 = x_prev1
+        x_prev1 = x_new
     return np.array(res)
 
 class RandomApp:
@@ -27,12 +31,13 @@ class RandomApp:
 
         self.params_frame = ttk.LabelFrame(root, text="Параметры")
         self.params_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
-        self.n_var = tk.IntVar(value=100000)
+
+        self.n_var = tk.IntVar(value=10000)
         self.seed_var = tk.IntVar(value=42)
         self.add_spin("Размер выборки (N)", self.n_var, 1000, 1000000, 1000)
         self.add_spin("Seed", self.seed_var, 1, 2147483646, 1)
 
-        columns = ("Метрика", "MCG", "LCG", "Встроенный", "Теория")
+        columns = ("Метрика", "MCG", "Фибоначчи", "Встроенный", "Теория")
         self.table = ttk.Treeview(self.params_frame, columns=columns, show="headings", height=6)
         for col in columns:
             self.table.heading(col, text=col)
@@ -61,20 +66,19 @@ class RandomApp:
         ttk.Spinbox(self.params_frame, from_=start, to=end, increment=step, textvariable=var).pack(fill="x", pady=2)
 
     def sample_stats(self, sample):
-        return {
-            "Среднее": np.mean(sample),
-            "Дисперсия": np.var(sample)
-        }
+        return {"Среднее": np.mean(sample), "Дисперсия": np.var(sample)}
 
     def run(self):
         N = self.n_var.get()
         seed = self.seed_var.get()
+
         mcg_sample = mcg(N, seed)
-        lcg_sample = lcg(N, seed)
+        fib_sample = fibonacci_gen(N, seed)
         np.random.seed(seed)
         builtin_sample = np.random.random(N)
+
         mcg_stats = self.sample_stats(mcg_sample)
-        lcg_stats = self.sample_stats(lcg_sample)
+        fib_stats = self.sample_stats(fib_sample)
         builtin_stats = self.sample_stats(builtin_sample)
 
         theory_stats = {"Среднее": 0.5, "Дисперсия": 1 / 12}
@@ -82,12 +86,16 @@ class RandomApp:
         for row in self.table.get_children():
             self.table.delete(row)
         for key in mcg_stats.keys():
-            self.table.insert("", "end", values=(key, f"{mcg_stats[key]:.5f}", f"{lcg_stats[key]:.5f}", f"{builtin_stats[key]:.5f}", f"{theory_stats[key]:.5f}"))
+            self.table.insert("", "end", values=(
+            key, f"{mcg_stats[key]:.5f}", f"{fib_stats[key]:.5f}", f"{builtin_stats[key]:.5f}",
+            f"{theory_stats[key]:.5f}"))
 
         self.ax.clear()
         self.ax.hist(mcg_sample, bins=50, alpha=0.4, label="MCG", color='skyblue', edgecolor='black', linewidth=0.5)
-        self.ax.hist(lcg_sample, bins=50, alpha=0.4, label="LCG", color='salmon', edgecolor='black', linewidth=0.5)
-        self.ax.hist(builtin_sample, bins=50, alpha=0.4, label="Встроенный", color='lightgreen', edgecolor='black', linewidth=0.5)
+        self.ax.hist(fib_sample, bins=50, alpha=0.4, label="Фибоначчи", color='salmon', edgecolor='black',
+                     linewidth=0.5)
+        self.ax.hist(builtin_sample, bins=50, alpha=0.4, label="Встроенный", color='lightgreen', edgecolor='black',
+                     linewidth=0.5)
 
         self.ax.set_title("Сравнение гистограмм")
         self.ax.set_xlabel("Значение")
