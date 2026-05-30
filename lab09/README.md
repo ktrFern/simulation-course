@@ -44,4 +44,4 @@ $$P_0^{\text{эмп}} = \frac{\text{принятых}}{N}, \quad P_1^{\text{эм
 
 **Пример работы программы**
 
-<img src="LR_MM1.png" width="1000">
+<img src="lab9.png" width="1000">
